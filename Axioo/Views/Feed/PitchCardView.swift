@@ -1,6 +1,7 @@
 import SwiftUI
+import AVFoundation
 
-// MARK: - Animated Video Background
+// MARK: - Animated gradient fallback (shown while video loads)
 struct AnimatedVideoBackground: View {
     let pitch: Pitch
     @State private var phase1 = false
@@ -32,7 +33,29 @@ struct AnimatedVideoBackground: View {
                 .blur(radius: 50)
                 .offset(x: phase1 ? -110 : 60, y: phase1 ? 110 : -160)
                 .opacity(0.5)
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 4.5 + seed * 2).repeatForever(autoreverses: true)) { phase1 = true }
+            withAnimation(.easeInOut(duration: 6.0 + seed * 3).repeatForever(autoreverses: true)) { phase2 = true }
+        }
+    }
+}
 
+// MARK: - Background layer
+struct PitchBackground: View {
+    let pitch: Pitch
+    let player: AVPlayer?
+
+    var body: some View {
+        ZStack {
+            if player != nil {
+                VideoPlayerLayer(player: player)
+                    .ignoresSafeArea()
+            } else {
+                AnimatedVideoBackground(pitch: pitch)
+            }
+
+            // Text-readability gradient — always present regardless of source
             LinearGradient(
                 colors: [
                     .clear, .clear,
@@ -40,13 +63,9 @@ struct AnimatedVideoBackground: View {
                     Color.axiooBlack.opacity(0.8),
                     Color.axiooBlack.opacity(0.97)
                 ],
-                startPoint: .top,
-                endPoint: .bottom
+                startPoint: .top, endPoint: .bottom
             )
-        }
-        .onAppear {
-            withAnimation(.easeInOut(duration: 4.5 + seed * 2).repeatForever(autoreverses: true)) { phase1 = true }
-            withAnimation(.easeInOut(duration: 6.0 + seed * 3).repeatForever(autoreverses: true)) { phase2 = true }
+            .ignoresSafeArea()
         }
     }
 }
@@ -111,19 +130,16 @@ struct ActionButton: View {
 }
 
 // MARK: - Pitch Card
-// Pure presentation component — receives data and action callbacks.
-// Has no knowledge of AppViewModel.
 struct PitchCardView: View {
     let pitch: Pitch
+    let player: AVPlayer?
+    let swipe: SwipeState     // offset + intensity driven by UIKit HorizontalOnlyPan
     let onLike: () -> Void
     let onSave: () -> Void
 
-    @State private var swipeOffset: CGFloat = 0
-    @State private var swipeIntensity: CGFloat = 0
-
     var body: some View {
         ZStack {
-            AnimatedVideoBackground(pitch: pitch).ignoresSafeArea()
+            PitchBackground(pitch: pitch, player: player).ignoresSafeArea()
 
             // Top bar
             VStack(spacing: 0) {
@@ -144,7 +160,6 @@ struct PitchCardView: View {
             VStack(spacing: 0) {
                 Spacer()
                 HStack(alignment: .bottom, spacing: 0) {
-                    // Startup info (left)
                     VStack(alignment: .leading, spacing: 6) {
                         Text(pitch.startupName)
                             .font(.system(size: 48, weight: .heavy))
@@ -180,7 +195,6 @@ struct PitchCardView: View {
 
                     Spacer(minLength: 16)
 
-                    // Action rail (right)
                     VStack(spacing: 22) {
                         ActionButton(
                             systemImage: pitch.isLiked ? "heart.fill" : "heart",
@@ -206,81 +220,36 @@ struct PitchCardView: View {
                 .padding(.bottom, 104)
             }
 
-            // Swipe overlays
-            if swipeIntensity > 0.05 {
+            // Swipe overlays — driven by swipe.intensity from UIKit gesture
+            if swipe.intensity > 0.05 {
                 ZStack(alignment: .topLeading) {
                     LinearGradient(
-                        colors: [Color.axiooOrange.opacity(Double(swipeIntensity) * 0.5), .clear],
+                        colors: [Color.axiooOrange.opacity(swipe.intensity * 0.5), .clear],
                         startPoint: .leading, endPoint: .trailing
                     )
                     LikeStamp()
-                        .opacity(Double(swipeIntensity))
+                        .opacity(swipe.intensity)
                         .rotationEffect(.degrees(-12))
                         .padding(.top, 90).padding(.leading, 30)
                 }
                 .allowsHitTesting(false)
             }
 
-            if swipeIntensity < -0.05 {
+            if swipe.intensity < -0.05 {
                 ZStack(alignment: .topTrailing) {
                     LinearGradient(
-                        colors: [.clear, .white.opacity(Double(abs(swipeIntensity)) * 0.15)],
+                        colors: [.clear, .white.opacity(abs(swipe.intensity) * 0.15)],
                         startPoint: .leading, endPoint: .trailing
                     )
                     PassStamp()
-                        .opacity(Double(abs(swipeIntensity)))
+                        .opacity(abs(swipe.intensity))
                         .rotationEffect(.degrees(12))
                         .padding(.top, 90).padding(.trailing, 30)
                 }
                 .allowsHitTesting(false)
             }
         }
-        .offset(x: swipeOffset)
-        .rotationEffect(.degrees(Double(swipeOffset) / 28), anchor: .bottom)
-        .gesture(swipeGesture)
-        .animation(.interactiveSpring(response: 0.35, dampingFraction: 0.8), value: swipeOffset)
-    }
-
-    // MARK: - Gesture handling (presentation logic only)
-    private var swipeGesture: some Gesture {
-        DragGesture(minimumDistance: 12)
-            .onChanged { value in
-                let dx = abs(value.translation.width)
-                let dy = abs(value.translation.height)
-                guard dx > dy * 0.8 else { return }
-                swipeOffset    = value.translation.width * 0.85
-                swipeIntensity = min(1, dx / 110) * (value.translation.width > 0 ? 1 : -1)
-            }
-            .onEnded { value in
-                let dx = abs(value.translation.width)
-                let dy = abs(value.translation.height)
-                guard dx > dy * 0.8 else { resetSwipe(); return }
-                if      value.translation.width >  90 { triggerLike() }
-                else if value.translation.width < -90 { triggerPass() }
-                else                                   { resetSwipe() }
-            }
-    }
-
-    private func triggerLike() {
-        onLike()
-        withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) { swipeOffset = 100 }
-        Task {
-            try? await Task.sleep(for: .milliseconds(160))
-            resetSwipe()
-        }
-    }
-
-    private func triggerPass() {
-        withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) { swipeOffset = -100 }
-        Task {
-            try? await Task.sleep(for: .milliseconds(160))
-            resetSwipe()
-        }
-    }
-
-    private func resetSwipe() {
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
-            swipeOffset = 0; swipeIntensity = 0
-        }
+        .offset(x: swipe.offset)
+        .rotationEffect(.degrees(swipe.offset / 28), anchor: .bottom)
     }
 }

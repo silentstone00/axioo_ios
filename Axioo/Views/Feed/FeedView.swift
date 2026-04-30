@@ -1,30 +1,38 @@
 import SwiftUI
 
-// Screen-level view. Owns the ViewModel reference and wires
-// action closures down to PitchCardView components.
 struct FeedView: View {
     var vm: AppViewModel
+    @State private var currentIndex = 0
+    @State private var cache = PlayerCache()
+    // One SwipeState per pitch — stable references shared between
+    // UIKit gesture (in VideoFeedView) and SwiftUI view (PitchCardView).
+    @State private var swipeStates = Pitch.sampleFeed.map { _ in SwipeState() }
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(spacing: 0) {
-                ForEach(vm.pitches) { pitch in
-                    PitchCardView(
-                        pitch: pitch,
-                        onLike: { vm.toggleLike(id: pitch.id) },
-                        onSave: { vm.toggleSave(id: pitch.id) }
-                    )
-                    .containerRelativeFrame([.horizontal, .vertical])
-                    .scrollTransition { content, phase in
-                        content
-                            .opacity(phase.isIdentity ? 1 : 0.75)
-                            .scaleEffect(phase.isIdentity ? 1 : 0.96)
-                    }
-                }
-            }
-            .scrollTargetLayout()
-        }
-        .scrollTargetBehavior(.paging)
+        VideoFeedView(
+            pitches:     vm.pitches,
+            players:     cache.players,
+            swipeStates: swipeStates,
+            onLike:      { i in vm.toggleLike(id: vm.pitches[i].id) },
+            onSave:      { i in vm.toggleSave(id: vm.pitches[i].id) },
+            onSwipeLike: { i in vm.toggleLike(id: vm.pitches[i].id) },
+            currentIndex: $currentIndex
+        )
         .ignoresSafeArea()
+        .onChange(of: currentIndex) { _, idx in warmAndPlay(around: idx) }
+        .onChange(of: vm.videosPopulated) { _, ready in
+            guard ready else { return }
+            warmAndPlay(around: currentIndex)
+        }
+        .onAppear { warmAndPlay(around: 0) }
+    }
+
+    private func warmAndPlay(around index: Int) {
+        guard !vm.pitches.isEmpty else { return }
+        cache.warmUp(pitches: vm.pitches, around: index)
+        let id = vm.pitches[index].id
+        cache.play(id: id)
+        if index > 0 { cache.pause(id: vm.pitches[index - 1].id) }
+        if index < vm.pitches.count - 1 { cache.pause(id: vm.pitches[index + 1].id) }
     }
 }

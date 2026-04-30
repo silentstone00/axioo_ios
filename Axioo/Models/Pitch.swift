@@ -18,6 +18,8 @@ struct Pitch: Identifiable {
     let locationTag: String
     let raised: String?
     let durationSeconds: Int
+    // Populated asynchronously by AppViewModel via PexelsService
+    var videoURL: URL? = nil
 }
 
 // MARK: - Sample data (sorted by trendingScore)

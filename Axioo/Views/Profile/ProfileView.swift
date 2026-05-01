@@ -212,31 +212,19 @@ struct ProfilePitchRow: View {
     let section: ProfileView.ProfileSection
     let onRemove: () -> Void
 
-    @State private var phase = false
-    private var seed: Double { Double(abs(pitch.id.hashValue) % 1000) / 1000.0 }
-
     var body: some View {
         HStack(spacing: 14) {
-            ZStack {
-                Rectangle().fill(pitch.colors[0])
-                Ellipse()
-                    .fill(pitch.colors.count > 1 ? pitch.colors[1] : pitch.colors[0])
-                    .frame(width: 80, height: 80)
-                    .blur(radius: 20)
-                    .offset(x: phase ? 15 : -15, y: phase ? -15 : 10)
-                    .opacity(0.7)
-                LinearGradient(
-                    colors: [.clear, Color.axiooBlack.opacity(0.6)],
-                    startPoint: .top, endPoint: .bottom
-                )
-            }
-            .frame(width: 72, height: 72)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .onAppear {
-                withAnimation(.easeInOut(duration: 2.5 + seed * 2).repeatForever(autoreverses: true)) {
-                    phase = true
+            AsyncImage(url: pitch.thumbnailURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().scaledToFill()
+                default:
+                    Rectangle().fill(pitch.colors[0])
                 }
             }
+            .frame(width: 72, height: 72)
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {

@@ -27,12 +27,24 @@ class AppViewModel {
 
     // MARK: - Video prefetch
     private func fetchVideos() async {
-        let urls = await PexelsService.fetchPopularPortraitURLs(count: max(pitches.count, 15))
-        guard !urls.isEmpty else { return }
+        let results = await PexelsService.fetchPopularPortraitURLs(count: max(pitches.count, 15))
+        guard !results.isEmpty else { return }
         for i in pitches.indices {
-            pitches[i].videoURL = urls[i % urls.count]
+            let result = results[i % results.count]
+            pitches[i].videoURL = result.videoURL
+            pitches[i].thumbnailURL = result.thumbnailURL
         }
         videosPopulated = true
+        Task { await prefetchThumbnails(results) }
+    }
+
+    private func prefetchThumbnails(_ results: [PexelsService.PexelsResult]) async {
+        await withTaskGroup(of: Void.self) { group in
+            for result in results {
+                guard let url = result.thumbnailURL else { continue }
+                group.addTask { _ = try? await URLSession.shared.data(from: url) }
+            }
+        }
     }
 
     // MARK: - Actions

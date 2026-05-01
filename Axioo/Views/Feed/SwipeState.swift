@@ -6,4 +6,5 @@ import CoreGraphics
 @Observable final class SwipeState {
     var offset: CGFloat = 0
     var intensity: CGFloat = 0
+    var isPlaying2x: Bool = false
 }

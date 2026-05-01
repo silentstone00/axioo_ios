@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import CoreMedia
 
 // MARK: - Animated gradient fallback (shown while video loads)
 struct AnimatedVideoBackground: View {
@@ -71,9 +72,38 @@ struct PitchBackground: View {
 }
 
 // MARK: - Video Progress Bar
+
+private final class ProgressObserver {
+    weak var player: AVPlayer?
+    var token: Any?
+
+    func start(player: AVPlayer, onUpdate: @escaping (CGFloat) -> Void) {
+        stop()
+        self.player = player
+        token = player.addPeriodicTimeObserver(
+            forInterval: CMTime(seconds: 0.1, preferredTimescale: 600),
+            queue: .main
+        ) { [weak player] time in
+            guard let item = player?.currentItem,
+                  item.duration.isValid, !item.duration.isIndefinite,
+                  item.duration.seconds > 0 else { return }
+            onUpdate(CGFloat(time.seconds / item.duration.seconds))
+        }
+    }
+
+    func stop() {
+        if let token, let player { player.removeTimeObserver(token) }
+        token = nil
+        player = nil
+    }
+
+    deinit { stop() }
+}
+
 struct VideoProgressBar: View {
-    let durationSeconds: Int
+    let player: AVPlayer?
     @State private var progress: CGFloat = 0
+    @State private var obs = ProgressObserver()
 
     var body: some View {
         GeometryReader { geo in
@@ -85,8 +115,11 @@ struct VideoProgressBar: View {
             }
         }
         .frame(height: 2)
-        .onAppear {
-            withAnimation(.linear(duration: Double(durationSeconds))) { progress = 1.0 }
+        .onAppear   { if let p = player { obs.start(player: p) { progress = $0 } } }
+        .onDisappear { obs.stop(); progress = 0 }
+        .onChange(of: player) { _, newPlayer in
+            if let p = newPlayer { obs.start(player: p) { progress = $0 } }
+            else { obs.stop(); progress = 0 }
         }
     }
 }
@@ -143,14 +176,24 @@ struct PitchCardView: View {
 
             // Top bar
             VStack(spacing: 0) {
-                VideoProgressBar(durationSeconds: pitch.durationSeconds)
+                VideoProgressBar(player: player)
                     .padding(.horizontal, 16)
                     .padding(.top, 60)
                 HStack(spacing: 8) {
                     CategoryBadge(text: pitch.category)
                     if pitch.trendingScore >= 90 { TrendingBadge() }
                     Spacer()
+                    if swipe.isPlaying2x {
+                        Text("2×")
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Capsule().fill(.white.opacity(0.18)))
+                            .transition(.opacity.combined(with: .scale(scale: 0.85)))
+                    }
                 }
+                .animation(.easeInOut(duration: 0.15), value: swipe.isPlaying2x)
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
                 Spacer()

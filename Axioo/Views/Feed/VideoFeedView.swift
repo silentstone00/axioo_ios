@@ -139,10 +139,10 @@ final class VideoFeedViewController: UIViewController,
         let i = ip.item
 
         cell.host(view: hostingControllers[i].view)
-        cell.attachInteraction(player: players[pitches[i].id])
+        cell.attachInteraction(player: players[pitches[i].id], swipeState: swipeStates[i])
         cell.attachSwipe(
             state: swipeStates[i],
-            onChanged: { [weak self] tx, state in
+            onChanged: { tx, state in
                 state.offset    = tx * 0.85
                 state.intensity = min(1, abs(tx) / 110) * (tx > 0 ? 1 : -1)
             },
@@ -189,6 +189,7 @@ private final class VideoCell: UICollectionViewCell, UIGestureRecognizerDelegate
     private var holdGR: UILongPressGestureRecognizer?
 
     private weak var player: AVPlayer?
+    private var swipeState: SwipeState?
     private var wasPlayingBeforeHold = false
 
     private enum Zone { case left, center, right }
@@ -225,8 +226,9 @@ private final class VideoCell: UICollectionViewCell, UIGestureRecognizerDelegate
 
     // MARK: - Zone interaction (tap center = pause/resume, hold left/right = 2x)
 
-    func attachInteraction(player: AVPlayer?) {
+    func attachInteraction(player: AVPlayer?, swipeState: SwipeState) {
         self.player = player
+        self.swipeState = swipeState
         if let old = tapGR  { contentView.removeGestureRecognizer(old) }
         if let old = holdGR { contentView.removeGestureRecognizer(old) }
 
@@ -267,10 +269,11 @@ private final class VideoCell: UICollectionViewCell, UIGestureRecognizerDelegate
         switch gr.state {
         case .began:
             wasPlayingBeforeHold = player.timeControlStatus == .playing
-            if wasPlayingBeforeHold { player.rate = 2.0 }
+            if wasPlayingBeforeHold { player.rate = 2.0; swipeState?.isPlaying2x = true }
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         case .ended, .cancelled, .failed:
             if wasPlayingBeforeHold { player.rate = 1.0 }
+            swipeState?.isPlaying2x = false
             wasPlayingBeforeHold = false
         default: break
         }

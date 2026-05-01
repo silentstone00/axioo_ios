@@ -17,7 +17,6 @@ struct Pitch: Identifiable {
     let colors: [Color]
     let locationTag: String
     let raised: String?
-    let durationSeconds: Int
     // Populated asynchronously by AppViewModel via PexelsService
     var videoURL: URL? = nil
 }
@@ -36,8 +35,7 @@ extension Pitch {
             trendingScore: 99,
             colors: [Color(hex: "201E1F"), Color(hex: "685BC7"), Color(hex: "2D2360")],
             locationTag: "London, UK",
-            raised: "$4.8M raised",
-            durationSeconds: 87
+            raised: "$4.8M raised"
         ),
         Pitch(
             startupName: "NOVA",
@@ -50,8 +48,7 @@ extension Pitch {
             trendingScore: 95,
             colors: [Color(hex: "685BC7"), Color(hex: "201E1F"), Color(hex: "3B2F8F")],
             locationTag: "San Francisco, CA",
-            raised: "$1.2M raised",
-            durationSeconds: 62
+            raised: "$1.2M raised"
         ),
         Pitch(
             startupName: "ECHO",
@@ -64,8 +61,7 @@ extension Pitch {
             trendingScore: 91,
             colors: [Color(hex: "FE572A"), Color(hex: "685BC7"), Color(hex: "8B1E0E")],
             locationTag: "Austin, TX",
-            raised: nil,
-            durationSeconds: 74
+            raised: nil
         ),
         Pitch(
             startupName: "KERN",
@@ -78,8 +74,7 @@ extension Pitch {
             trendingScore: 88,
             colors: [Color(hex: "FE572A"), Color(hex: "201E1F"), Color(hex: "5A1A0A")],
             locationTag: "New York, NY",
-            raised: nil,
-            durationSeconds: 55
+            raised: nil
         ),
         Pitch(
             startupName: "LUMEN",
@@ -92,8 +87,7 @@ extension Pitch {
             trendingScore: 87,
             colors: [Color(hex: "FE572A"), Color(hex: "201E1F"), Color(hex: "3D0E00")],
             locationTag: "Lagos, NG",
-            raised: nil,
-            durationSeconds: 69
+            raised: nil
         ),
         Pitch(
             startupName: "STRATA",
@@ -106,8 +100,7 @@ extension Pitch {
             trendingScore: 83,
             colors: [Color(hex: "0A2818"), Color(hex: "1A4D2E"), Color(hex: "201E1F")],
             locationTag: "Stockholm, SE",
-            raised: "$2.1M raised",
-            durationSeconds: 81
+            raised: "$2.1M raised"
         ),
         Pitch(
             startupName: "DRIFT",
@@ -120,8 +113,7 @@ extension Pitch {
             trendingScore: 79,
             colors: [Color(hex: "685BC7"), Color(hex: "FE572A"), Color(hex: "201E1F")],
             locationTag: "Tokyo, JP",
-            raised: "$3.5M raised",
-            durationSeconds: 93
+            raised: "$3.5M raised"
         ),
         Pitch(
             startupName: "FLUX",
@@ -134,8 +126,7 @@ extension Pitch {
             trendingScore: 76,
             colors: [Color(hex: "0E2A1E"), Color(hex: "1C5236"), Color(hex: "201E1F")],
             locationTag: "Berlin, DE",
-            raised: "$800K raised",
-            durationSeconds: 78
+            raised: "$800K raised"
         ),
     ]
 }

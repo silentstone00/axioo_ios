@@ -139,6 +139,7 @@ final class VideoFeedViewController: UIViewController,
         let i = ip.item
 
         cell.host(view: hostingControllers[i].view)
+        cell.attachInteraction(player: players[pitches[i].id])
         cell.attachSwipe(
             state: swipeStates[i],
             onChanged: { [weak self] tx, state in
@@ -180,11 +181,26 @@ private final class PagingCollectionView: UICollectionView, UIGestureRecognizerD
 }
 
 // MARK: - VideoCell
-private final class VideoCell: UICollectionViewCell {
+private final class VideoCell: UICollectionViewCell, UIGestureRecognizerDelegate {
     static let reuseID = "VideoCell"
-    private var pan: HorizontalOnlyPan?
 
-    // Swap hosted SwiftUI view into cell
+    private var pan:  HorizontalOnlyPan?
+    private var tapGR: UITapGestureRecognizer?
+    private var holdGR: UILongPressGestureRecognizer?
+
+    private weak var player: AVPlayer?
+    private var wasPlayingBeforeHold = false
+
+    private enum Zone { case left, center, right }
+    private func zone(at point: CGPoint) -> Zone {
+        let w = contentView.bounds.width
+        if point.x < w * 0.25 { return .left }
+        if point.x > w * 0.75 { return .right }
+        return .center
+    }
+
+    // MARK: - Hosting
+
     func host(view: UIView) {
         contentView.subviews.forEach { $0.removeFromSuperview() }
         view.frame = contentView.bounds
@@ -192,7 +208,8 @@ private final class VideoCell: UICollectionViewCell {
         contentView.addSubview(view)
     }
 
-    // Attach a fresh HorizontalOnlyPan to contentView
+    // MARK: - Swipe (horizontal like/pass)
+
     func attachSwipe(
         state: SwipeState,
         onChanged: @escaping (CGFloat, SwipeState) -> Void,
@@ -204,6 +221,59 @@ private final class VideoCell: UICollectionViewCell {
         p.onEnded   = { tx, vx in onEnded(tx, vx, state) }
         contentView.addGestureRecognizer(p)
         pan = p
+    }
+
+    // MARK: - Zone interaction (tap center = pause/resume, hold left/right = 2x)
+
+    func attachInteraction(player: AVPlayer?) {
+        self.player = player
+        if let old = tapGR  { contentView.removeGestureRecognizer(old) }
+        if let old = holdGR { contentView.removeGestureRecognizer(old) }
+
+        let hold = UILongPressGestureRecognizer(target: self, action: #selector(handleHold))
+        hold.minimumPressDuration = 0.2
+        hold.delegate = self
+        contentView.addGestureRecognizer(hold)
+        holdGR = hold
+
+        let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap))
+        tap.delegate = self
+        contentView.addGestureRecognizer(tap)
+        tapGR = tap
+    }
+
+    // Route each recognizer to its zone before it begins — avoids require(toFail:) delay.
+    override func gestureRecognizerShouldBegin(_ gr: UIGestureRecognizer) -> Bool {
+        let z = zone(at: gr.location(in: contentView))
+        if gr === tapGR  { return z == .center }
+        if gr === holdGR { return z != .center }
+        return true
+    }
+
+    // Allow hold + HorizontalOnlyPan to fire simultaneously so a slight finger
+    // drift during a hold doesn't cancel the 2x-speed state.
+    func gestureRecognizer(_ gr: UIGestureRecognizer,
+                           shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+        return gr === holdGR && other is UIPanGestureRecognizer
+    }
+
+    @objc private func handleTap(_ gr: UITapGestureRecognizer) {
+        guard let player else { return }
+        player.timeControlStatus == .paused ? player.play() : player.pause()
+    }
+
+    @objc private func handleHold(_ gr: UILongPressGestureRecognizer) {
+        guard let player else { return }
+        switch gr.state {
+        case .began:
+            wasPlayingBeforeHold = player.timeControlStatus == .playing
+            if wasPlayingBeforeHold { player.rate = 2.0 }
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        case .ended, .cancelled, .failed:
+            if wasPlayingBeforeHold { player.rate = 1.0 }
+            wasPlayingBeforeHold = false
+        default: break
+        }
     }
 }
 

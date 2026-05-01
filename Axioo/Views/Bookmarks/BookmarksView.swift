@@ -36,9 +36,6 @@ struct BookmarksView: View {
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     HStack(spacing: 6) {
-                        Image(systemName: "bookmark.fill")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(Color.axiooPurple)
                         Text("SAVED")
                             .font(.system(size: 13, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color.axiooCream)

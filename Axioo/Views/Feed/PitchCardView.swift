@@ -205,7 +205,7 @@ struct PitchCardView: View {
                 HStack(alignment: .bottom, spacing: 0) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(pitch.startupName)
-                            .font(.system(size: 48, weight: .heavy))
+                            .font(.system(size: 24, weight: .semibold))
                             .foregroundStyle(.white)
                             .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 2)
                         Text(pitch.tagline)

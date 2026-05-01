@@ -7,7 +7,7 @@ import Observation
 final class PlayerCache {
 
     private(set) var players: [UUID: AVPlayer] = [:]
-    private let windowSize = 2
+    private let windowSize = 3
 
     // MARK: - Window management
     func warmUp(pitches: [Pitch], around index: Int) {

@@ -98,7 +98,7 @@ struct BookmarkCard: View {
                 HStack(spacing: 4) {
                     Image(systemName: "heart.fill")
                         .font(.system(size: 9))
-                        .foregroundStyle(Color.axiooOrange)
+                        .foregroundStyle(Color.red)
                     Text(formatMetric(pitch.likes))
                         .font(.system(size: 10, weight: .medium, design: .monospaced))
                         .foregroundStyle(.white.opacity(0.6))

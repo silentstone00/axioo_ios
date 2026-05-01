@@ -31,4 +31,9 @@ final class _PlayerLayerView: UIView {
         backgroundColor = .black
     }
     required init?(coder: NSCoder) { fatalError() }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        playerLayer.frame = bounds
+    }
 }

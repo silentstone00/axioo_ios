@@ -48,13 +48,14 @@ final class VideoFeedViewController: UIViewController,
 
     private lazy var collectionView: PagingCollectionView = {
         let layout = UICollectionViewFlowLayout()
-        layout.scrollDirection  = .vertical
+        layout.scrollDirection    = .vertical
         layout.minimumLineSpacing = 0
         let cv = PagingCollectionView(frame: .zero, collectionViewLayout: layout)
         cv.isPagingEnabled = true
         cv.showsVerticalScrollIndicator = false
         cv.backgroundColor = .black
         cv.bounces = false
+        cv.contentInsetAdjustmentBehavior = .never
         cv.dataSource = self
         cv.delegate   = self
         cv.register(VideoCell.self, forCellWithReuseIdentifier: VideoCell.reuseID)
@@ -82,6 +83,7 @@ final class VideoFeedViewController: UIViewController,
         view.addSubview(collectionView)
         collectionView.frame = view.bounds
         collectionView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        (collectionView.collectionViewLayout as? UICollectionViewFlowLayout)?.itemSize = view.bounds.size
         buildHostingControllers()
     }
 
@@ -97,12 +99,25 @@ final class VideoFeedViewController: UIViewController,
         for (i, hc) in hostingControllers.enumerated() where i < pitches.count {
             hc.rootView = pitchCardView(at: i)
         }
+        // Cells that were dequeued before players loaded have player = nil.
+        // Push the real player into them now so tap/hold interactions work.
+        for cell in collectionView.visibleCells {
+            guard let ip = collectionView.indexPath(for: cell) as IndexPath?,
+                  let vc = cell as? VideoCell else { continue }
+            let i = ip.item
+            vc.attachInteraction(player: players[pitches[i].id], swipeState: swipeStates[i])
+        }
     }
 
     // MARK: Private helpers
     private func buildHostingControllers() {
         hostingControllers = pitches.indices.map { i in
             let hc = UIHostingController(rootView: pitchCardView(at: i))
+            // Don't let the hosting controller impose its own safe area — SwiftUI's
+            // .ignoresSafeArea() calls handle that. Without this, the first cell
+            // computes zero safe area insets (VC not yet in window at viewDidLoad time)
+            // and leaves a black gap under the status bar that only clears after a swipe.
+            hc.safeAreaRegions = []
             hc.view.backgroundColor = .clear
             addChild(hc)
             hc.didMove(toParent: self)
@@ -164,9 +179,24 @@ final class VideoFeedViewController: UIViewController,
     }
 
     // MARK: UIScrollViewDelegate (paging callback)
+
+    // Fire early — at 50% scroll — so PlayerCache warms up before the card is fully visible.
+    private var lastReportedPage = 0
+    func scrollViewDidScroll(_ sv: UIScrollView) {
+        let h = max(sv.frame.height, 1)
+        let page = min(pitches.count - 1, max(0, Int((sv.contentOffset.y + h * 0.5) / h)))
+        if page != lastReportedPage {
+            lastReportedPage = page
+            onPageChange(page)
+        }
+    }
+
     func scrollViewDidEndDecelerating(_ sv: UIScrollView) {
         let page = Int(sv.contentOffset.y / max(sv.frame.height, 1))
-        onPageChange(page)
+        if page != lastReportedPage {
+            lastReportedPage = page
+            onPageChange(page)
+        }
     }
 }
 

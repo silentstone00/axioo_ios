@@ -96,10 +96,10 @@ struct LikeStamp: View {
     var body: some View {
         Text("LIKE")
             .font(.system(size: 30, weight: .heavy, design: .monospaced))
-            .foregroundStyle(Color.axiooOrange)
+            .foregroundStyle(Color.red)
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .overlay(Rectangle().strokeBorder(Color.axiooOrange, lineWidth: 2.5))
+            .overlay(Rectangle().strokeBorder(Color.red, lineWidth: 2.5))
     }
 }
 

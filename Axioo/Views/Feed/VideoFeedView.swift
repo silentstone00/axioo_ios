@@ -56,7 +56,7 @@ final class VideoFeedViewController: UIViewController,
         let cv = PagingCollectionView(frame: .zero, collectionViewLayout: layout)
         cv.isPagingEnabled = true
         cv.showsVerticalScrollIndicator = false
-        cv.backgroundColor = .black
+        cv.backgroundColor = UIColor(Color.axiooBlack)
         cv.bounces = false
         cv.contentInsetAdjustmentBehavior = .never
         cv.dataSource = self
@@ -210,6 +210,49 @@ final class VideoFeedViewController: UIViewController,
     }
 }
 
+// MARK: - SwipeLabelView
+// Sits behind the card in the axiooBlack area. Stationary — the card slides over it.
+private struct SwipeLabelView: View {
+    let swipe: SwipeState
+
+    private var likeConfirmed: Bool { swipe.intensity >= 0.99 }
+    private var passConfirmed: Bool { swipe.intensity <= -0.99 }
+
+    var body: some View {
+        VStack {
+            HStack {
+                Text("LIKE")
+                    .strokedText(
+                        size: 52,
+                        weight: .black,
+                        textColor: likeConfirmed ? .axiooOrange : .axiooBlack,
+                        strokeColor: .axiooOrange,
+                        strokeWidth: 1
+                    )
+                    .rotationEffect(.degrees(-90))
+                    .opacity(Double(max(0, swipe.intensity)))
+                    .animation(.easeInOut(duration: 0.2), value: likeConfirmed)
+                Spacer()
+
+                Text("PASS")
+                    .strokedText(
+                        size: 52,
+                        weight: .black,
+                        textColor: passConfirmed ? .axiooBlack : .axiooPurple,
+                        strokeColor: .axiooPurple,
+                        strokeWidth: 1
+                    )
+                    .rotationEffect(.degrees(90))
+                    .opacity(Double(max(0, -swipe.intensity)))
+                    .animation(.easeInOut(duration: 0.2), value: passConfirmed)
+            }
+            .padding(.horizontal, 8)
+            Spacer()
+        }
+        .padding(.top, 220)
+    }
+}
+
 // MARK: - PagingCollectionView
 // UICollectionView subclass so we can act as our own gesture delegate and
 // allow simultaneous recognition with HorizontalOnlyPan on cells.
@@ -232,6 +275,11 @@ private final class VideoCell: UICollectionViewCell, UIGestureRecognizerDelegate
     private var swipeState: SwipeState?
     private var wasPlayingBeforeHold = false
 
+    private var labelVC: UIHostingController<SwipeLabelView>?
+
+    override init(frame: CGRect) { super.init(frame: frame) }
+    required init?(coder: NSCoder) { fatalError() }
+
     private enum Zone { case left, center, right }
     private func zone(at point: CGPoint) -> Zone {
         let w = contentView.bounds.width
@@ -243,10 +291,13 @@ private final class VideoCell: UICollectionViewCell, UIGestureRecognizerDelegate
     // MARK: - Hosting
 
     func host(view: UIView) {
-        contentView.subviews.forEach { $0.removeFromSuperview() }
+        // Remove previous card but keep the label view behind
+        contentView.subviews
+            .filter { $0 !== labelVC?.view }
+            .forEach { $0.removeFromSuperview() }
         view.frame = contentView.bounds
         view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        contentView.addSubview(view)
+        contentView.addSubview(view) // card on top of labels
     }
 
     // MARK: - Swipe (horizontal like/pass)
@@ -256,22 +307,39 @@ private final class VideoCell: UICollectionViewCell, UIGestureRecognizerDelegate
         onChanged: @escaping (CGFloat, SwipeState) -> Void,
         onEnded:   @escaping (CGFloat, CGFloat, SwipeState) -> Void
     ) {
+        // Create label view once; on cell reuse update the swipe reference
+        if let existing = labelVC {
+            existing.rootView = SwipeLabelView(swipe: state)
+        } else {
+            let vc = UIHostingController(rootView: SwipeLabelView(swipe: state))
+            vc.safeAreaRegions = []
+            vc.view.backgroundColor = .clear
+            vc.view.isUserInteractionEnabled = false
+            vc.view.frame = contentView.bounds
+            vc.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            contentView.insertSubview(vc.view, at: 0) // behind the card
+            labelVC = vc
+        }
+
         if let old = pan { contentView.removeGestureRecognizer(old) }
         var hapticFired = false
-        let haptic = UISelectionFeedbackGenerator()
+        let haptic = UIImpactFeedbackGenerator(style: .light)
         haptic.prepare()
         let p = HorizontalOnlyPan()
         p.onChanged = { tx in
             onChanged(tx, state)
-            // Soft tick when card reaches max drag — indicates boundary, not confirmation
-            if abs(state.intensity) >= 0.99 && !hapticFired {
-                haptic.selectionChanged()
+            let intensity = state.intensity
+            if abs(intensity) >= 0.99 && !hapticFired {
+                haptic.impactOccurred()
                 hapticFired = true
-            } else if abs(state.intensity) < 0.99 {
+            } else if abs(intensity) < 0.99 {
                 hapticFired = false
             }
         }
-        p.onEnded = { tx, vx in onEnded(tx, vx, state); hapticFired = false }
+        p.onEnded = { tx, vx in
+            onEnded(tx, vx, state)
+            hapticFired = false
+        }
         contentView.addGestureRecognizer(p)
         pan = p
     }

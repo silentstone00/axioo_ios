@@ -82,39 +82,6 @@ Axioo follows a **clean, modern, premium, and minimal** design philosophy:
 
 ---
 
-## Project Structure
-
-```
-Axioo/
-├── Models/
-│   ├── AppUser.swift          # User model (Founder/Investor)
-│   └── Pitch.swift            # Pitch video data model
-├── ViewModels/
-│   └── AppViewModel.swift     # Core app state management
-├── Views/
-│   ├── Feed/                  # Video feed and pitch cards
-│   │   ├── FeedView.swift
-│   │   ├── VideoFeedView.swift
-│   │   ├── PitchCardView.swift
-│   │   ├── VideoPlayerLayer.swift
-│   │   └── SwipeState.swift
-│   ├── Bookmarks/             # Saved pitches
-│   │   └── BookmarksView.swift
-│   ├── Profile/               # User profile
-│   │   └── ProfileView.swift
-│   └── Main/
-│       └── ContentView.swift  # Tab navigation
-├── Services/
-│   ├── PexelsService.swift    # Video content service
-│   └── PlayerCache.swift      # Video player optimization
-├── DesignSystem/
-│   └── DesignSystem.swift     # Design tokens and styles
-└── Modifier/
-    └── StrokeTextModifier.swift
-```
-
----
-
 ## Setup Instructions
 
 ### Requirements
@@ -126,7 +93,7 @@ Axioo/
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/axioo.git
+git clone [https://github.com/yourusername/axioo.git](https://github.com/silentstone00/axioo_ios.git)
 cd axioo
 ```
 
@@ -165,38 +132,3 @@ open Axioo.xcodeproj
 - Video player caching to reduce memory footprint
 - Lazy loading of video content
 - Optimized for 60fps scrolling experience
-
----
-
-## Evaluation Criteria
-
-This prototype is evaluated on:
-
-1. **Product Thinking** — Does the experience solve the discovery problem elegantly?
-2. **UI/UX Quality** — Is the interface intuitive, fluid, and delightful?
-3. **Visual Design** — Does it feel premium, modern, and polished?
-4. **Technical Execution** — Is the implementation smooth and performant?
-
----
-
-## Future Enhancements
-
-- [ ] Founder pitch upload flow
-- [ ] Advanced filtering by category/stage/location
-- [ ] Direct messaging between founders and investors
-- [ ] Pitch analytics dashboard for founders
-- [ ] Social sharing capabilities
-- [ ] Search functionality
-- [ ] Personalized feed algorithm
-
----
-
-## License
-
-This project is a prototype evaluation and is not currently licensed for public use.
-
----
-
-## Contact
-
-For questions or feedback about this prototype, please reach out through the project repository.

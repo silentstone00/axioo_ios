@@ -105,7 +105,7 @@ Axioo follows a **clean, modern, premium, and minimal** design philosophy:
 
 1. **Clone the repository**
 ```bash
-git clone [https://github.com/yourusername/axioo.git](https://github.com/silentstone00/axioo_ios.git)
+git clone https://github.com/silentstone00/axioo_ios.git
 cd axioo
 ```
 

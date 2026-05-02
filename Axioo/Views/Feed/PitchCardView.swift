@@ -112,6 +112,7 @@ struct VideoProgressBar: View {
                 Capsule()
                     .fill(.white.opacity(0.9))
                     .frame(width: geo.size.width * progress, height: 2)
+                    .animation(.linear(duration: 0.1), value: progress)
             }
         }
         .frame(height: 2)
@@ -263,34 +264,6 @@ struct PitchCardView: View {
                 .padding(.bottom, 104)
             }
 
-            // Swipe overlays — driven by swipe.intensity from UIKit gesture
-            if swipe.intensity > 0.05 {
-                ZStack(alignment: .topLeading) {
-                    LinearGradient(
-                        colors: [Color.axiooOrange.opacity(swipe.intensity * 0.5), .clear],
-                        startPoint: .leading, endPoint: .trailing
-                    )
-                    LikeStamp()
-                        .opacity(swipe.intensity)
-                        .rotationEffect(.degrees(-12))
-                        .padding(.top, 90).padding(.leading, 30)
-                }
-                .allowsHitTesting(false)
-            }
-
-            if swipe.intensity < -0.05 {
-                ZStack(alignment: .topTrailing) {
-                    LinearGradient(
-                        colors: [.clear, .white.opacity(abs(swipe.intensity) * 0.15)],
-                        startPoint: .leading, endPoint: .trailing
-                    )
-                    PassStamp()
-                        .opacity(abs(swipe.intensity))
-                        .rotationEffect(.degrees(12))
-                        .padding(.top, 90).padding(.trailing, 30)
-                }
-                .allowsHitTesting(false)
-            }
         }
         .offset(x: swipe.offset)
         .rotationEffect(.degrees(swipe.offset / 28), anchor: .bottom)

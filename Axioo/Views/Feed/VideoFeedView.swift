@@ -10,6 +10,7 @@ struct VideoFeedView: UIViewControllerRepresentable {
     let onLike:       (Int) -> Void
     let onSave:       (Int) -> Void
     let onSwipeLike:  (Int) -> Void
+    let onSwipePass:  (Int) -> Void
     @Binding var currentIndex: Int
 
     func makeUIViewController(context: Context) -> VideoFeedViewController {
@@ -20,6 +21,7 @@ struct VideoFeedView: UIViewControllerRepresentable {
             onLike:       onLike,
             onSave:       onSave,
             onSwipeLike:  onSwipeLike,
+            onSwipePass:  onSwipePass,
             onPageChange: { currentIndex = $0 }
         )
     }
@@ -41,6 +43,7 @@ final class VideoFeedViewController: UIViewController,
     private let onLike:      (Int) -> Void
     private let onSave:      (Int) -> Void
     private let onSwipeLike: (Int) -> Void
+    private let onSwipePass: (Int) -> Void
     private let onPageChange:(Int) -> Void
 
     // One UIHostingController per pitch — created once, reused across cell reuse cycles
@@ -65,13 +68,15 @@ final class VideoFeedViewController: UIViewController,
     // MARK: Init
     init(pitches: [Pitch], players: [UUID: AVPlayer], swipeStates: [SwipeState],
          onLike: @escaping (Int) -> Void, onSave: @escaping (Int) -> Void,
-         onSwipeLike: @escaping (Int) -> Void, onPageChange: @escaping (Int) -> Void) {
+         onSwipeLike: @escaping (Int) -> Void, onSwipePass: @escaping (Int) -> Void,
+         onPageChange: @escaping (Int) -> Void) {
         self.pitches      = pitches
         self.players      = players
         self.swipeStates  = swipeStates
         self.onLike       = onLike
         self.onSave       = onSave
         self.onSwipeLike  = onSwipeLike
+        self.onSwipePass  = onSwipePass
         self.onPageChange = onPageChange
         super.init(nibName: nil, bundle: nil)
     }
@@ -136,9 +141,11 @@ final class VideoFeedViewController: UIViewController,
     }
 
     private func animateSwipe(state: SwipeState, offset: CGFloat) {
-        withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) { state.offset = offset }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+        let direction: CGFloat = offset > 0 ? 1 : -1
+        withAnimation(.spring(response: 0.15, dampingFraction: 0.6)) {
+            state.offset = direction * 100
+        } completion: {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
                 state.offset = 0; state.intensity = 0
             }
         }
@@ -158,18 +165,21 @@ final class VideoFeedViewController: UIViewController,
         cell.attachSwipe(
             state: swipeStates[i],
             onChanged: { tx, state in
-                state.offset    = tx * 0.85
+                let raw = tx * 0.85
+                // Cap visual travel to ±100 pt — keeps black area minimal
+                state.offset    = raw > 0 ? min(100, raw) : max(-100, raw)
                 state.intensity = min(1, abs(tx) / 110) * (tx > 0 ? 1 : -1)
             },
             onEnded: { [weak self] tx, vx, state in
                 guard let self else { return }
-                if tx > 80 || (tx > 30 && vx > 400) {
+                if tx > 30 && vx > 400 {
                     self.onSwipeLike(i)
                     self.animateSwipe(state: state, offset: 600)
-                } else if tx < -80 || (tx < -30 && vx < -400) {
+                } else if tx < -30 && vx < -400 {
+                    self.onSwipePass(i)
                     self.animateSwipe(state: state, offset: -600)
                 } else {
-                    withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.88)) {
                         state.offset = 0; state.intensity = 0
                     }
                 }
@@ -206,7 +216,7 @@ final class VideoFeedViewController: UIViewController,
 private final class PagingCollectionView: UICollectionView, UIGestureRecognizerDelegate {
     func gestureRecognizer(_ gr: UIGestureRecognizer,
                            shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
-        return other is UIPanGestureRecognizer
+        return other is HorizontalOnlyPan
     }
 }
 
@@ -247,9 +257,21 @@ private final class VideoCell: UICollectionViewCell, UIGestureRecognizerDelegate
         onEnded:   @escaping (CGFloat, CGFloat, SwipeState) -> Void
     ) {
         if let old = pan { contentView.removeGestureRecognizer(old) }
+        var hapticFired = false
+        let haptic = UISelectionFeedbackGenerator()
+        haptic.prepare()
         let p = HorizontalOnlyPan()
-        p.onChanged = { tx in onChanged(tx, state) }
-        p.onEnded   = { tx, vx in onEnded(tx, vx, state) }
+        p.onChanged = { tx in
+            onChanged(tx, state)
+            // Soft tick when card reaches max drag — indicates boundary, not confirmation
+            if abs(state.intensity) >= 0.99 && !hapticFired {
+                haptic.selectionChanged()
+                hapticFired = true
+            } else if abs(state.intensity) < 0.99 {
+                hapticFired = false
+            }
+        }
+        p.onEnded = { tx, vx in onEnded(tx, vx, state); hapticFired = false }
         contentView.addGestureRecognizer(p)
         pan = p
     }

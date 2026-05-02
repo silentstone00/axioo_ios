@@ -16,6 +16,7 @@ struct FeedView: View {
             onLike:      { i in vm.toggleLike(id: vm.pitches[i].id) },
             onSave:      { i in vm.toggleSave(id: vm.pitches[i].id) },
             onSwipeLike: { i in vm.toggleLike(id: vm.pitches[i].id) },
+            onSwipePass: { _ in },
             currentIndex: $currentIndex
         )
         .ignoresSafeArea()
@@ -24,7 +25,8 @@ struct FeedView: View {
             guard ready else { return }
             warmAndPlay(around: currentIndex)
         }
-        .onAppear { warmAndPlay(around: 0) }
+        .onAppear  { warmAndPlay(around: currentIndex) }
+        .onDisappear { cache.pause(id: vm.pitches[currentIndex].id) }
     }
 
     private func warmAndPlay(around index: Int) {

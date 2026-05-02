@@ -1,8 +1,20 @@
-# Axioo — Startup Pitch Discovery
+# Axioo
 
 A scroll-based video pitch discovery platform built with SwiftUI. Discover startups through TikTok-style vertical video feeds where founders share their vision in short, engaging pitch videos.
 
 - **Demo Video**: [Watch on Google Drive](https://drive.google.com/file/d/1fbSLjim1Iy94OFHbBK7OqNQ6_1LMPfUZ/view?usp=sharing)
+
+---
+
+## Screenshots
+
+<p align="center">
+  <img src="sc/ax1.PNG" width="18%"/>
+  <img src="sc/ax2.PNG" width="18%"/>
+  <img src="sc/ax3.PNG" width="18%"/>
+  <img src="sc/ax4.PNG" width="18%"/>
+  <img src="sc/ax5.PNG" width="18%"/>
+</p>
 
 ---
 

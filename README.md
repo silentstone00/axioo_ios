@@ -2,6 +2,8 @@
 
 A scroll-based video pitch discovery platform built with SwiftUI. Discover startups through TikTok-style vertical video feeds where founders share their vision in short, engaging pitch videos.
 
+- **Demo Video**: [Watch on Google Drive](https://drive.google.com/file/d/1fbSLjim1Iy94OFHbBK7OqNQ6_1LMPfUZ/view?usp=sharing)
+
 ---
 
 ## Overview
